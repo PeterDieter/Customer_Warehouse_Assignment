@@ -27,7 +27,6 @@ void Environment::initialize(int timeLimit)
     // CONSTRUCTOR: First we initialize the environment by assigning 
     int courierCounter = 0;
     int pickerCounter = 0;
-    penaltyForNotServing = 7200;
     totalWaitingTime = 0;
     highestWaitingTimeOfAnOrder = 0;
     latestArrivalTime = 0;
@@ -224,12 +223,12 @@ int Environment::getObjValue(){
     for (Order* order: orders){
         if (order->accepted){
             if (order->arrivalTime == -1){
-                objectiveValue += penaltyForNotServing;
+                objectiveValue += data->penaltyForNotServing;
             }else{
                 objectiveValue += (order->arrivalTime-order->orderTime); 
             }
         }else{
-            objectiveValue += penaltyForNotServing;
+            objectiveValue += data->penaltyForNotServing;
         }
     } 
     return objectiveValue;
@@ -385,7 +384,7 @@ torch::Tensor Environment::getCostsVectorDiscountedAssignmentProblem(float lambd
             if (order->arrivalTime != -1){
                 costsForOrder = order->arrivalTime-order->orderTime;  
             }else{
-                costsForOrder = penaltyForNotServing;
+                costsForOrder = data->penaltyForNotServing;
                 costsVec.push_back(costsForOrder);
                 continue;
             }
@@ -398,13 +397,13 @@ torch::Tensor Environment::getCostsVectorDiscountedAssignmentProblem(float lambd
                     }
                     else{
                         double dist = euclideanDistance((*orderAfter)->client->lat, order->assignedWarehouse->lat,(*orderAfter)->client->lon, order->assignedWarehouse->lon);
-                        costsForOrder += (penaltyForNotServing)*pow(lambdaTemporal, (*orderAfter)->orderTime-order->orderTime)*pow(lambdaSpatial, dist);
+                        costsForOrder += (data->penaltyForNotServing)*pow(lambdaTemporal, (*orderAfter)->orderTime-order->orderTime)*pow(lambdaSpatial, dist);
                     }
                 //}
 
             } 
         }else{
-            costsForOrder = penaltyForNotServing;
+            costsForOrder = data->penaltyForNotServing;
         }
         //std::cout<<"Costs: "<<costsForOrder<<" "<<order->arrivalTime<<" "<<order->orderTime<<std::endl;
         costsVec.push_back(costsForOrder);
@@ -649,15 +648,15 @@ void Environment::testREINFORCE(int timeLimit)
 
 void Environment::simulate(char *argv[])
 {   
-    int timeLimit = 12*3600;
-    if (std::string(argv[2]) == "nearestWarehouse"){
+    int timeLimit = std::stoi(argv[2])*3600;
+    if (std::string(argv[5]) == "nearestWarehouse"){
         nearestWarehousePolicy(timeLimit);
-    }else if (std::string(argv[2]) == "trainREINFORCE"){
-        trainREINFORCE(timeLimit, std::stod(argv[3]), std::stod(argv[4]));
-    }else if (std::string(argv[2]) == "testREINFORCE"){
+    }else if (std::string(argv[5]) == "trainREINFORCE"){
+        trainREINFORCE(timeLimit, std::stod(argv[6]), std::stod(argv[7]));
+    }else if (std::string(argv[5]) == "testREINFORCE"){
         testREINFORCE(timeLimit);
     }else{
-        std::cerr<<"Method: " << argv[2] << " not found."<<std::endl;
+        std::cerr<<"Method: " << argv[5] << " not found."<<std::endl;
     }
 
 }

@@ -87,12 +87,13 @@ struct Picker
 class Data
 {
 public:
-	Data(std::string instanceName);
+	Data(char * argv[]);
 	// Data of the problem instance
 	int nbClients;							// Number of clients
 	int nbWarehouses;						// Number of warehouses
 	int nbCouriers;							// Total Number of couriers
 	int nbPickers;							// Total number of pickers
+	int penaltyForNotServing;				// Penalty for not serving (rejecting) an order. In seconds!
 	double interArrivalTime;				// Inter arrival time of incoming orders
 	double meanCommissionTime;				// Mean time it takes to commission an order (exponential distributed)
 	double meanServiceTimeAtClient;			// Mean time it takes to serivce an order (at the client) (exponential distributed)

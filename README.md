@@ -66,16 +66,16 @@ make
 You can then execute the code with:
 
 ```
-./onlineAssignment instanceName methodName
+./onlineAssignment instanceName simulationLength rejectionCosts interArrivalRate methodName
 ```
 
-where **instanceName** gives the path to the .txt file containing the instance information, **methodName** is a string that determines the method which will be applied/trained for the assignment problem. In case the REINFORCE method is trained, one additionally needs to specify  **lambdaTemporal** and **lambdaSpatial**, which are float parameters (see section above). For example:
+where **instanceName** gives the path to the .txt file containing the instance information. The second parameter is the **simulation length** in hours (int). The third parameter is the **rejection costs** in seconds (int). The fourth parameter is the **interarrival rate** in seconds (int). The **methodName** is a string that determines the method which will be applied/trained for the assignment problem In case the REINFORCE method is trained, one additionally needs to specify  **lambdaTemporal** and **lambdaSpatial**, which are float parameters (see section above). For example:
 
 ```
-./onlineAssignment instances/instance_train.txt trainREINFORCE 0.99 0.85
+./onlineAssignment instances/instance_train.txt 6 3600 25 trainREINFORCE 0.95 0.85
 ```
 
-Currently, the following methods are available:
+Currently, the following assigning strategies are available:
 1. nearestWarehouse: In this policy, the nearest warehouse is selected for each order and each courier is also assigned back to his nearest warehouse. Each order is accepted.
 2. trainREINFORCE: In this method, we train a neural network with the REINFORCE algorithm to assign orders to warehouses/ to reject orders. The neural network gets saved as "net_REINFORCE.pt".
 3. testREINFORCE: We apply the policy net which was trained in the "trainREINFORCE" method.

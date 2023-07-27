@@ -48,7 +48,6 @@ private:
 	int totalWaitingTime;
 	int highestWaitingTimeOfAnOrder;
 	int latestArrivalTime;
-	double penaltyForNotServing;
 	torch::Tensor assingmentProblemStates;
 	torch::Tensor assingmentProblemActions;
 

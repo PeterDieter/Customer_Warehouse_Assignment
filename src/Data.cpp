@@ -13,20 +13,21 @@
 
 
 
-Data::Data(std::string instanceName)
+Data::Data(char * argv[])
 {
 	rng = XorShift128(0);
 	nbClients = 0;
 	nbWarehouses = 0;
 	nbCouriers = 0;
 	nbPickers = 0;
-	interArrivalTime = 15;
+	penaltyForNotServing = std::stoi(argv[3]);
+	interArrivalTime = std::stoi(argv[4]);
 	meanCommissionTime = 120;
 	meanServiceTimeAtClient = 60;
 	paramClients = std::vector<Client>(40000); // 40000 is an upper limit, can be increase ofc
 	paramWarehouses = std::vector<Warehouse>(30); // 30 is an upper limit, can be increased ofc
 	std::string content, content2, content3;
-	std::ifstream inputFile(instanceName);
+	std::ifstream inputFile(argv[1]);
 	if (!inputFile) throw std::runtime_error("Could not find file instance");
 	if (inputFile.is_open())
 	{

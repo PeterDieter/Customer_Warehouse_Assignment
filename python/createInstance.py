@@ -3,7 +3,7 @@ import numpy as np
 import json
 import random
 
-def create_instance(fileName: str, limit: int=900, couriersPerWarehouse: int=5, pickersPerWarehouse: int=3, interArrivalTime: int=15, meanComissionTime: int=120, meanServiceTimeAtClient: int=60):
+def create_instance(fileName: str, limit: int=900, couriersPerWarehouse: int=5, pickersPerWarehouse: int=3, meanComissionTime: int=120, meanServiceTimeAtClient: int=60):
     """Create a .txt file of a problem instance
     Args:
         fileName (str): File in which we save the instance parameters
@@ -21,7 +21,6 @@ def create_instance(fileName: str, limit: int=900, couriersPerWarehouse: int=5, 
     df = df.to_numpy()
     random.seed(422)
     rndIdxs = random.sample(range(len(df)), round(len(df)*0.75))
-    print(len(rndIdxs))
     clients = df[rndIdxs,:3]
     matrix = df[rndIdxs,3:].astype(int)
     #clients = df[:,:3]
@@ -47,7 +46,6 @@ def create_instance(fileName: str, limit: int=900, couriersPerWarehouse: int=5, 
                 ("NAME", fileName),
                 ("NUMBER_CLIENTS", len(clients)),
                 ("NUMBER_WAREHOUSES", len(warehouses)),
-                ("INTER_ARRIVAL_TIME", interArrivalTime),
                 ("MEAN_COMMISSION_TIME", meanComissionTime),
                 ("MEAN_SERVICE_AT_CLIENT_TIME", meanServiceTimeAtClient)]
         ]))
@@ -79,4 +77,4 @@ def create_instance(fileName: str, limit: int=900, couriersPerWarehouse: int=5, 
 
 
 if __name__ == "__main__":
-    create_instance(fileName = "instance_train", limit=900, couriersPerWarehouse=5, pickersPerWarehouse=3, interArrivalTime=30, meanComissionTime=180, meanServiceTimeAtClient=60)
+    create_instance(fileName = "instance_train", limit=900, couriersPerWarehouse=5, pickersPerWarehouse=3, meanComissionTime=180, meanServiceTimeAtClient=60)

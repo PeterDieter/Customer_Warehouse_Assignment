@@ -10,7 +10,7 @@ int main(int argc, char * argv[])
 {
   // Reading the data file and initializing some data structures
   std::cout << "----- READING DATA SET " << argv[1] << " -----" << std::endl;
-  Data data(argv[1]);
+  Data data(argv);
   std::cout << "----- Instance with " << data.nbClients << " Clients, " << data.nbWarehouses << " Warehouses -----"<< std::endl;
 
   // Creating the Environment
