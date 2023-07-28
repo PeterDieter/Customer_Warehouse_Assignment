@@ -259,6 +259,21 @@ void Environment::RemoveOrderFromVector(std::vector<Order*> & V, Order* orderToD
         V.end());
 }
 
+void Environment::AddOrderToVector(std::vector<Order*> & V, Order* orderToAdd) {
+    bool inserted = false;
+    for (int i = V.size() - 1; i >= 0; --i) {
+        Order* obj = V[i]; // Access the object using the index
+        if(obj->arrivalTime < orderToAdd->arrivalTime){
+            V.insert(V.begin() + i +1, orderToAdd);
+            inserted = true;
+            break;
+        }
+    }
+    if(!inserted){
+       V.insert(V.begin(), orderToAdd); 
+    }
+}
+
 void Environment::RemoveCourierFromVector(std::vector<Courier*> & V, Courier* courierToDelete) {
     V.erase(
         std::remove_if(V.begin(), V.end(), [&](Courier* const & o) {
@@ -297,12 +312,7 @@ void Environment::updateOrderBeingServedNext(){
         nextOrderBeingServed = nullptr;
         timeNextCourierArrivesAtOrder = INT_MAX;
     }else{
-        for (auto order : ordersAssignedToCourierButNotServed){
-            if(order->arrivalTime < highestArrivalTime){
-                nextOrderBeingServed = order;
-                highestArrivalTime = order->arrivalTime;
-            }
-        }
+        nextOrderBeingServed = ordersAssignedToCourierButNotServed[0];
         timeNextCourierArrivesAtOrder = nextOrderBeingServed->arrivalTime;
     }
 }
@@ -390,22 +400,18 @@ torch::Tensor Environment::getCostsVectorDiscountedAssignmentProblem(float lambd
             }
             auto start_iter = std::next(orders.begin(), orderCounter);
             for (auto orderAfter = start_iter; orderAfter != orders.end(); ++orderAfter){
-               //if ((*orderAfter)->assignedWarehouse == order->assignedWarehouse){
-                    if ((*orderAfter)->arrivalTime != -1){
-                        double dist = euclideanDistance((*orderAfter)->assignedWarehouse->lat, order->assignedWarehouse->lat,(*orderAfter)->assignedWarehouse->lon, order->assignedWarehouse->lon);
-                        costsForOrder += ((*orderAfter)->arrivalTime-(*orderAfter)->orderTime)*pow(lambdaTemporal, (*orderAfter)->orderTime-order->orderTime) *pow(1, dist);
-                    }
-                    else{
-                        double dist = euclideanDistance((*orderAfter)->client->lat, order->assignedWarehouse->lat,(*orderAfter)->client->lon, order->assignedWarehouse->lon);
-                        costsForOrder += (data->penaltyForNotServing)*pow(lambdaTemporal, (*orderAfter)->orderTime-order->orderTime)*pow(lambdaSpatial, dist);
-                    }
-                //}
-
+                if ((*orderAfter)->arrivalTime != -1){
+                    double dist = euclideanDistance((*orderAfter)->assignedWarehouse->lat, order->assignedWarehouse->lat,(*orderAfter)->assignedWarehouse->lon, order->assignedWarehouse->lon);
+                    costsForOrder += ((*orderAfter)->arrivalTime-(*orderAfter)->orderTime)*pow(lambdaTemporal, (*orderAfter)->orderTime-order->orderTime) *pow(lambdaSpatial, dist);
+                }
+                else{
+                    double dist = euclideanDistance((*orderAfter)->client->lat, order->assignedWarehouse->lat,(*orderAfter)->client->lon, order->assignedWarehouse->lon);
+                    costsForOrder += (data->penaltyForNotServing)*pow(lambdaTemporal, (*orderAfter)->orderTime-order->orderTime)*pow(lambdaSpatial, dist);
+                }
             } 
         }else{
             costsForOrder = data->penaltyForNotServing;
         }
-        //std::cout<<"Costs: "<<costsForOrder<<" "<<order->arrivalTime<<" "<<order->orderTime<<std::endl;
         costsVec.push_back(costsForOrder);
     }
 
@@ -456,7 +462,7 @@ void Environment::nearestWarehousePolicy(int timeLimit)
                 // If there are couriers assigned to the warehouse, we can assign a courier to the order
                 if (newOrder->assignedWarehouse->couriersAssigned.size()>0){
                     chooseCourierForOrder(newOrder);
-                    ordersAssignedToCourierButNotServed.push_back(newOrder);
+                    AddOrderToVector(ordersAssignedToCourierButNotServed, newOrder);
                 }else{ // else we add the order to list of orders that have not been assigned to a courier yet
                     newOrder->assignedWarehouse->ordersNotAssignedToCourier.push_back(newOrder);    
                 }
@@ -469,7 +475,7 @@ void Environment::nearestWarehousePolicy(int timeLimit)
                     if (c->assignedToWarehouse->ordersNotAssignedToCourier.size()>0){
                         Order* orderToAssignToCourier = c->assignedToWarehouse->ordersNotAssignedToCourier[0];
                         chooseCourierForOrder(orderToAssignToCourier);
-                        ordersAssignedToCourierButNotServed.push_back(orderToAssignToCourier);
+                        AddOrderToVector(ordersAssignedToCourierButNotServed, orderToAssignToCourier);
                     }
                 }
             }
@@ -528,7 +534,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
                     // If there are couriers assigned to the warehouse, we can assign a courier to the order
                     if (newOrder->assignedWarehouse->couriersAssigned.size()>0){
                         chooseCourierForOrder(newOrder);
-                        ordersAssignedToCourierButNotServed.push_back(newOrder);
+                        AddOrderToVector(ordersAssignedToCourierButNotServed, newOrder);
                     }else{ // else we add the order to list of orders that have not been assigned to a courier yet
                         newOrder->assignedWarehouse->ordersNotAssignedToCourier.push_back(newOrder);  
                     }
@@ -543,7 +549,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
                     if (c->assignedToWarehouse->ordersNotAssignedToCourier.size()>0){
                         Order* orderToAssignToCourier = c->assignedToWarehouse->ordersNotAssignedToCourier[0];
                         chooseCourierForOrder(orderToAssignToCourier);
-                        ordersAssignedToCourierButNotServed.push_back(orderToAssignToCourier);
+                        AddOrderToVector(ordersAssignedToCourierButNotServed, orderToAssignToCourier);
                     }
                 }
             }
@@ -617,7 +623,7 @@ void Environment::testREINFORCE(int timeLimit)
                     // If there are couriers assigned to the warehouse, we can assign a courier to the order
                     if (newOrder->assignedWarehouse->couriersAssigned.size()>0){
                         chooseCourierForOrder(newOrder);
-                        ordersAssignedToCourierButNotServed.push_back(newOrder);
+                        AddOrderToVector(ordersAssignedToCourierButNotServed, newOrder);
                     }else{ // else we add the order to list of orders that have not been assigned to a courier yet
                         newOrder->assignedWarehouse->ordersNotAssignedToCourier.push_back(newOrder);  
                     }
@@ -632,7 +638,7 @@ void Environment::testREINFORCE(int timeLimit)
                     if (c->assignedToWarehouse->ordersNotAssignedToCourier.size()>0){
                         Order* orderToAssignToCourier = c->assignedToWarehouse->ordersNotAssignedToCourier[0];
                         chooseCourierForOrder(orderToAssignToCourier);
-                        ordersAssignedToCourierButNotServed.push_back(orderToAssignToCourier);
+                        AddOrderToVector(ordersAssignedToCourierButNotServed, orderToAssignToCourier);
                     }
                 }
             }

@@ -77,6 +77,9 @@ private:
 	// Function that deletes order from ordersNotServed vector
 	void RemoveOrderFromVector(std::vector<Order*> & V, Order* orderToDelete);
 
+	// Function that adds order to a vector of orders based on the (expected) arrival time
+	void AddOrderToVector(std::vector<Order*> & V, Order* orderToAdd);
+
 	// Function that returns the euclidean distance between two locations
 	double euclideanDistance(double latFrom, double latTo, double lonFrom, double lonTo);
 
