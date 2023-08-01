@@ -92,6 +92,9 @@ private:
 	// Function that returns the fastest available courier assigned to a warehouse
 	Courier* getFastestAvailableCourier(Warehouse* warehouse);
 
+	// 
+	int getNumberOfAvailablePickers(Warehouse* warehouse);
+
 	// Function that updates the order that will be served next
 	void updateOrderBeingServedNext();
 
@@ -100,7 +103,7 @@ private:
 
 	// Functions that writes routes/orders and costs to file
 	void writeRoutesAndOrdersToFile(std::string fileNameRoutes, std::string fileNameOrders);
-	void writeCostsToFile(std::vector<float> costs, float lambdaTemporal, float lambdaSpatial);
+	void writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, float lambdaTemporal, float lambdaSpatial);
 
 	// Function to draw an inter arrival time based on rate specified in data
 	int drawFromExponentialDistribution(double lambda);

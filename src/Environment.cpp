@@ -140,7 +140,7 @@ void Environment::chooseCourierForOrder(Order* newOrder)
     // Remove courier from vector of couriers assigned to warehouse
     RemoveCourierFromVector(newOrder->assignedWarehouse->couriersAssigned, newOrder->assignedCourier);
     //newOrder->assignedCourier->assignedToWarehouse = nullptr;
-    newOrder->assignedCourier->timeWhenAvailable = INT_MAX;
+    newOrder->assignedCourier->timeWhenAvailable = currentTime;
 }
 
 
@@ -234,17 +234,22 @@ int Environment::getObjValue(){
     return objectiveValue;
 }
 
-void Environment::writeCostsToFile(std::vector<float> costs, float lambdaTemporal, float lambdaSpatial){
+void Environment::
+writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, float lambdaTemporal, float lambdaSpatial){
     std::string fileName = "data/trainingData/averageCosts" + std::to_string(lambdaTemporal) + std::to_string(lambdaSpatial) +".txt";
 	std::cout << "----- WRITING COST VECTOR IN : " << fileName << std::endl;
 	std::ofstream myfile(fileName);
 	if (myfile.is_open())
 	{
+        int _i = 0;
+        myfile << "TotalCosts " << "RejectionRate ";
+        myfile << std::endl;
 		for (auto cost : costs)
 		{
             // Here we print the order of customers that we visit 
-            myfile << cost;
+            myfile << cost << " " << averageRejectionRateVector[_i];
             myfile << std::endl;
+            _i += 1;
 		}
 	}
 	else std::cout << "----- IMPOSSIBLE TO OPEN: " << fileName << std::endl;
@@ -294,6 +299,16 @@ Picker* Environment::getFastestAvailablePicker(Warehouse* war){
     return fastestAvailablePicker;
 }
 
+int Environment::getNumberOfAvailablePickers(Warehouse* war){
+    int availablePickers = 0;
+    for (auto picker : war->pickersAssigned){
+        if(picker->timeWhenAvailable < currentTime){
+            availablePickers += 1;
+        }
+    }
+    return availablePickers;
+}
+
 Courier* Environment::getFastestAvailableCourier(Warehouse* war){
     int timeAvailable = INT_MAX;
     Courier* fastestAvailableCourier = war->couriersAssigned[0];
@@ -338,12 +353,14 @@ torch::Tensor Environment::getStateAssignmentProblem(Order* order){
     std::vector<int> wareHouseLoad;
     for (Warehouse* w : warehouses){
         state.push_back(w->couriersAssigned.size());
-        state.push_back(getFastestAvailablePicker(w)->timeWhenAvailable);
+        state.push_back(getNumberOfAvailablePickers(w));
+        state.push_back(std::max(0, getFastestAvailablePicker(w)->timeWhenAvailable - currentTime));
+        state.push_back(std::max(0, getFastestAvailableCourier(w)->timeWhenAvailable - currentTime));
     }
 
     // vector to tensor
     auto options = torch::TensorOptions().dtype(at::kFloat);
-    torch::Tensor stateTensor = torch::from_blob(state.data(), {1, data->nbWarehouses*3}, options).clone().to(torch::kFloat);
+    torch::Tensor stateTensor = torch::from_blob(state.data(), {1, data->nbWarehouses*5}, options).clone().to(torch::kFloat);
     return stateTensor;
 }
 
@@ -494,7 +511,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
 {
     std::cout<<"----- Training REINFORCE starts with lambda temporal " << lambdaTemporal << " and lambda spatial " << lambdaSpatial << " -----"<<std::endl;
     // Create neural network where each output node is assigned to a warehouse and one extra node for the reject decision
-    auto assignmentNet = std::make_shared<policyNetwork>(data->nbWarehouses*3, data->nbWarehouses+1);
+    auto assignmentNet = std::make_shared<policyNetwork>(data->nbWarehouses*5, data->nbWarehouses+1);
     torch::Tensor lossAssignmentNet;
     
 
@@ -504,8 +521,10 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
     torch::optim::Adam optimizerAssignmentNet(assignmentNet->parameters(), /*lr=*/0.0002);
     double running_costs = 0.0;
     double runningCounter = 0.0;
+    double runningRejectedpercentage = 0.0;
     std::vector< float> averageCostVector;
-    for (int epoch = 1; epoch <= 8000; epoch++) {
+    std::vector< float> averageRejectionRateVector;
+    for (int epoch = 1; epoch <= 200; epoch++) {
         // Initialize data structures
         initialize(timeLimit);
         // Start with simulation
@@ -565,18 +584,21 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
         optimizerAssignmentNet.step();       // Update the parameters based on the calculated gradients.
         
         running_costs += getObjValue();
+        runningRejectedpercentage += (float)rejectCount/(float)orderTimes.size();
         runningCounter += 1;
        
         if (epoch % 100 == 0) {
-            std::cout << "[Iteration: " << epoch << "] Average costs: " << running_costs / runningCounter << std::endl;
+            std::cout << "[Iteration: " << epoch << "] Average costs: " << running_costs / runningCounter << " Rejected requests:" << runningRejectedpercentage / runningCounter << std::endl;
             averageCostVector.push_back(running_costs/runningCounter);
+            averageRejectionRateVector.push_back(runningRejectedpercentage / runningCounter);
             running_costs = 0.0;
             runningCounter = 0.0;
+            runningRejectedpercentage = 0.0;
         }
     
     }
     std::cout<<"----- REINFORCE training finished -----"<<std::endl;
-    writeCostsToFile(averageCostVector, lambdaTemporal, lambdaSpatial);
+    writeCostsToFile(averageCostVector, averageRejectionRateVector, lambdaTemporal, lambdaSpatial);
     torch::save(assignmentNet,"src/assignmentNet_REINFORCE.pt");
     std::cout<<"----- Policy net saved in src/net_REINFORCE.pt -----"<<std::endl;
     
