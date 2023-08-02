@@ -22,7 +22,7 @@ Data::Data(char * argv[])
 	nbPickers = 0;
 	penaltyForNotServing = std::stoi(argv[3]);
 	interArrivalTime = std::stoi(argv[4]);
-	meanCommissionTime = 120;
+	meanCommissionTime = 180;
 	meanServiceTimeAtClient = 60;
 	paramClients = std::vector<Client>(40000); // 40000 is an upper limit, can be increase ofc
 	paramWarehouses = std::vector<Warehouse>(30); // 30 is an upper limit, can be increased ofc

@@ -32,6 +32,7 @@ void Environment::initialize(int timeLimit)
     latestArrivalTime = 0;
     nbOrdersServed = 0;
     rejectCount = 0;
+    nextOrderBeingServed = nullptr;
     ordersAssignedToCourierButNotServed = std::vector<Order*>(0);
     couriers = std::vector<Courier*>(0);
     pickers = std::vector<Picker*>(0);
@@ -234,9 +235,15 @@ int Environment::getObjValue(){
     return objectiveValue;
 }
 
-void Environment::
-writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, float lambdaTemporal, float lambdaSpatial){
-    std::string fileName = "data/trainingData/averageCosts" + std::to_string(lambdaTemporal) + std::to_string(lambdaSpatial) +".txt";
+void Environment::writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, float lambdaTemporal, float lambdaSpatial, bool is_training){
+    std::string fileName;
+    if (is_training){
+        fileName = "data/experimentData/trainingData/averageCosts_" + std::to_string(data->penaltyForNotServing) + "_" + std::to_string(data->interArrivalTime) + "_" + std::to_string(lambdaTemporal) + "_" + std::to_string(lambdaSpatial) +".txt";
+    }
+    else{
+        fileName = "data/experimentData/testData/averageCosts_" + std::to_string(data->penaltyForNotServing) + "_" + std::to_string(data->interArrivalTime) + "_"  + std::to_string(lambdaTemporal) + "_" + std::to_string(lambdaSpatial) +".txt";
+    }
+ 
 	std::cout << "----- WRITING COST VECTOR IN : " << fileName << std::endl;
 	std::ofstream myfile(fileName);
 	if (myfile.is_open())
@@ -248,6 +255,33 @@ writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRa
 		{
             // Here we print the order of customers that we visit 
             myfile << cost << " " << averageRejectionRateVector[_i];
+            myfile << std::endl;
+            _i += 1;
+		}
+	}
+	else std::cout << "----- IMPOSSIBLE TO OPEN: " << fileName << std::endl;
+}
+
+void Environment::writeStatsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, std::vector<float> averageWaitingTime, std::vector<float> maxWaitingTime, float lambdaTemporal, float lambdaSpatial, bool is_training){
+    std::string fileName;
+    if (is_training){
+        fileName = "data/experimentData/trainingData/statsData_" + std::to_string(data->penaltyForNotServing) + "_" + std::to_string(data->interArrivalTime) + "_" + std::to_string(lambdaTemporal) + "_" + std::to_string(lambdaSpatial) +".txt";
+    }
+    else{
+        fileName = "data/experimentData/testData/statsData_" + std::to_string(data->penaltyForNotServing) + "_" + std::to_string(data->interArrivalTime) + "_"  + std::to_string(lambdaTemporal) + "_" + std::to_string(lambdaSpatial) +".txt";
+    }
+ 
+	std::cout << "----- WRITING COST VECTOR IN : " << fileName << std::endl;
+	std::ofstream myfile(fileName);
+	if (myfile.is_open())
+	{
+        int _i = 0;
+        myfile << "TotalCosts " << "RejectionRate " <<"MeanWaitingTime " << "MaxWaitingTime ";
+        myfile << std::endl;
+		for (auto cost : costs)
+		{
+            // Here we print the order of customers that we visit 
+            myfile << cost << " " << averageRejectionRateVector[_i]<< " " << averageWaitingTime[_i]<< " " << maxWaitingTime[_i];
             myfile << std::endl;
             _i += 1;
 		}
@@ -524,7 +558,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
     double runningRejectedpercentage = 0.0;
     std::vector< float> averageCostVector;
     std::vector< float> averageRejectionRateVector;
-    for (int epoch = 1; epoch <= 200; epoch++) {
+    for (int epoch = 1; epoch <= 8000; epoch++) {
         // Initialize data structures
         initialize(timeLimit);
         // Start with simulation
@@ -598,30 +632,34 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
     
     }
     std::cout<<"----- REINFORCE training finished -----"<<std::endl;
-    writeCostsToFile(averageCostVector, averageRejectionRateVector, lambdaTemporal, lambdaSpatial);
+    writeCostsToFile(averageCostVector, averageRejectionRateVector, lambdaTemporal, lambdaSpatial, true);
     torch::save(assignmentNet,"src/assignmentNet_REINFORCE.pt");
-    std::cout<<"----- Policy net saved in src/net_REINFORCE.pt -----"<<std::endl;
+    std::cout<<"----- Policy net saved in src/assignmentNet_REINFORCE.pt -----"<<std::endl;
     
 }
 
 
-void Environment::testREINFORCE(int timeLimit)
+void Environment::testREINFORCE(int timeLimit, float lambdaTemporal, float lambdaSpatial)
 {
     std::cout<<"----- Testing REINFORCE starts -----"<<std::endl;
     // Load neural network
-    auto net = std::make_shared<policyNetwork>(data->nbWarehouses*3, data->nbWarehouses+1);
-    torch::load(net, "src/net_REINFORCE.pt");
+    auto net = std::make_shared<policyNetwork>(data->nbWarehouses*5, data->nbWarehouses+1);
+    torch::load(net, "src/assignmentNet_REINFORCE.pt");
     net->eval();
     
     double running_costs = 0.0;
     double runningCounter = 0.0;
+    std::vector< float> averageCostVector;
+    std::vector< float> averageRejectionRateVector;
+    std::vector< float> meanWaitingTimeVector;
+    std::vector< float> maxWaitingTimeVector;
     for (int epoch = 1; epoch <= 1000; epoch++) {
         // Initialize data structures
         initialize(timeLimit);
         // Start with simulation
+        int counter = 0;
         currentTime = 0;
         timeCustomerArrives = 0;
-        int counter = 0;
         timeNextCourierArrivesAtOrder = INT_MAX;
         while (currentTime < timeLimit || ordersAssignedToCourierButNotServed.size() > 0){
             // Keep track of current time
@@ -630,7 +668,6 @@ void Environment::testREINFORCE(int timeLimit)
             }else{
                 currentTime = std::min(timeCustomerArrives, timeNextCourierArrivesAtOrder);
             }
-
             if (timeCustomerArrives < timeNextCourierArrivesAtOrder && currentTime <= timeLimit && counter<orderTimes.size()-1){
                 timeCustomerArrives += orderTimes[counter];
                 counter += 1;
@@ -650,7 +687,6 @@ void Environment::testREINFORCE(int timeLimit)
                         newOrder->assignedWarehouse->ordersNotAssignedToCourier.push_back(newOrder);  
                     }
                 }
-
             }else { // when a courier arrives at an order
                 if (nextOrderBeingServed){
                     Courier* c = nextOrderBeingServed->assignedCourier;
@@ -665,11 +701,20 @@ void Environment::testREINFORCE(int timeLimit)
                 }
             }
         }
-        std::cout<<"----- Iteration: " << epoch << " Number of orders that arrived: " << orders.size() << " and served: " << nbOrdersServed << " Obj. value: " << getObjValue() << ". Mean wt: " << totalWaitingTime/nbOrdersServed <<" seconds. Highest wt: " << highestWaitingTimeOfAnOrder <<" seconds. -----" <<std::endl;
-        //writeRoutesAndOrdersToFile("data/animationData/routes_REINFORCE.txt", "data/animationData/orders_REINFORCE.txt");
         running_costs += getObjValue();
         runningCounter += 1;
+        averageCostVector.push_back(getObjValue());
+        averageRejectionRateVector.push_back((float)rejectCount/(float)orderTimes.size());
+        if (nbOrdersServed > 0){
+            //std::cout<<"----- Iteration: " << epoch << " Number of orders that arrived: " << orders.size() << " and served: " << nbOrdersServed << " Obj. value: " << getObjValue() << ". Mean wt: " << totalWaitingTime/nbOrdersServed <<" seconds. Highest wt: " << highestWaitingTimeOfAnOrder <<" seconds. -----" <<std::endl;
+            meanWaitingTimeVector.push_back(totalWaitingTime/nbOrdersServed);
+            maxWaitingTimeVector.push_back(highestWaitingTimeOfAnOrder);
+        }else{
+            meanWaitingTimeVector.push_back(0);
+            maxWaitingTimeVector.push_back(0);
+        }
     }
+    writeStatsToFile(averageCostVector, averageRejectionRateVector, meanWaitingTimeVector, maxWaitingTimeVector, lambdaTemporal, lambdaSpatial, false);
     std::cout<< "Iterations: " << runningCounter << " Average costs: " << running_costs / runningCounter <<std::endl;
     
 }
@@ -682,7 +727,7 @@ void Environment::simulate(char *argv[])
     }else if (std::string(argv[5]) == "trainREINFORCE"){
         trainREINFORCE(timeLimit, std::stod(argv[6]), std::stod(argv[7]));
     }else if (std::string(argv[5]) == "testREINFORCE"){
-        testREINFORCE(timeLimit);
+        testREINFORCE(timeLimit, std::stod(argv[6]), std::stod(argv[7]));
     }else{
         std::cerr<<"Method: " << argv[5] << " not found."<<std::endl;
     }

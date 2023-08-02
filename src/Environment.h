@@ -55,7 +55,7 @@ private:
 	void nearestWarehousePolicy(int timelimit);
 	// In these methods we train and test a REINFORCE algorithm
 	void trainREINFORCE(int timelimit, float lambdaTemporal, float lambdaSpatial);
-	void testREINFORCE(int timeLimit);
+	void testREINFORCE(int timeLimit, float lambdaTemporal, float lambdaSpatial);
 
 	// In this method we initialize the rest of the Data, such as warehouses, couriers, etc.
 	void initialize(int timeLimit);
@@ -103,8 +103,8 @@ private:
 
 	// Functions that writes routes/orders and costs to file
 	void writeRoutesAndOrdersToFile(std::string fileNameRoutes, std::string fileNameOrders);
-	void writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, float lambdaTemporal, float lambdaSpatial);
-
+	void writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, float lambdaTemporal, float lambdaSpatial, bool is_training);
+	void writeStatsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, std::vector<float> averageWaitingTime, std::vector<float> maxWaitingTime, float lambdaTemporal, float lambdaSpatial, bool is_training);
 	// Function to draw an inter arrival time based on rate specified in data
 	int drawFromExponentialDistribution(double lambda);
 

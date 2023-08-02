@@ -1,5 +1,7 @@
 import requests
 import json
+import os
+from dotenv import load_dotenv
 
 
 def downLoadIsochrones(warehouses):
@@ -16,7 +18,7 @@ def downLoadIsochrones(warehouses):
 
     headers = {
         'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
-        'Authorization': '5b3ce3597851110001cf62485cc6e778c4474849961f17cfd230ed0b',
+        'Authorization': os.getenv('OPEN_ROUTE_SERVICE_KEY'),
         'Content-Type': 'application/json; charset=utf-8'
     }
     call = requests.post('https://api.openrouteservice.org/v2/isochrones/cycling-electric', json=body, headers=headers)

@@ -1,3 +1,0 @@
-TotalCosts RejectionRate 
-845358 0.321057
-757769 0.171132
