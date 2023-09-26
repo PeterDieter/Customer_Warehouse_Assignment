@@ -1,7 +1,24 @@
 import os
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
+import pandas as pd
+import matplotlib.ticker as mticker
+from cycler import cycler
+from matplotlib.ticker import StrMethodFormatter, NullFormatter, FuncFormatter
 
+scientific_colors= [
+    '#1f77b4',  # Blue
+#    '#ff7f0e',  # Orange
+    '#2ca02c',  # Green
+    '#d62728',  # Red
+    '#1f77b4',  # Purple
+    '#8c564b',  # Brown
+    '#7f7f7f',  # Gray
+    '#000000'   # Cyan
+]
+
+line_cycler   = (cycler(color=scientific_colors) +
+                 cycler(linestyle=[":", "--", "-.", "-", ":", "--", "-."]))
 
 def smooth(scalars, weight):  # Weight between 0 and 1
     last = scalars[0]  # First value in the plot (first timestep)
@@ -13,60 +30,59 @@ def smooth(scalars, weight):  # Weight between 0 and 1
         
     return smoothed
 
-lines, lambdas = [], []
-for subdir, dirs, files in os.walk("data/trainingData/temporal"):
-    for file in sorted(files):
-        lam = file[12:17]
-        print(lam)
-        with open(os.path.join(subdir, file)) as fileToOpen:
-            line = [int(float(line.rstrip())) for line in fileToOpen]
-            lines.append(line)
-            lambdas.append(lam)
+trainingData = True
+if trainingData:
+    division = 100
+    multiplier = 100
+    offset = 3
+    fileName = "trainingData_08_25"
+else:
+    division = 1000
+    offset = 0
+    multiplier = 1
+    fileName = "testData_08_25"
 
+bestTv = float('inf')
+lines, tLams, sLams = [], [], []
+for subdir, dirs, files in os.walk("data/experimentData/" + fileName):
+    for file in sorted(files):
+        penalty = int(file[10+offset:14+offset])
+        arrivalRate = int(file[15+offset:17+offset])
+        tLam = file[25+offset:29+offset]
+        sLam = file[34+offset:38+offset]
+        if penalty == 2700 and arrivalRate == 25 and sLam == "1.00":
+            with open(os.path.join(subdir, file)) as fileToOpen:
+                df = pd.read_csv(os.path.join(subdir, file), delimiter=" ")
+                objValues = df.iloc[:,0].to_list()
+                tv = sum(objValues)
+                if tv < bestTv:
+                    bestTv = tv
+                    besttLam, bestslam = tLam, sLam
+                lines.append(objValues)
+                tLams.append(tLam)
+                sLams.append(sLam)
+print(besttLam, bestslam, bestTv/division)
 x = []
 for j in range(len(lines[0])):
-    x.append((j+1)*100)
+    x.append((j+1)*multiplier)
 
-
+print(len(lines))
 fig, ax = plt.subplots()
+ax.set_prop_cycle(line_cycler)
+plt.style.use('ggplot')
 for idx, line in enumerate(lines):
-    plt.plot(x, smooth(line, .8), label="$λ_t$ = " + lambdas[idx])
+    plt.plot(x, smooth(line, .7), label="$λ_t$ = " + tLams[idx] + " $λ_s$ = " + sLams[idx],)
 
 
 plt.xlabel("Iteration")
 plt.ylabel("Average costs")
 plt.legend()
 plt.yscale("log")
-ax.get_yaxis().set_major_formatter(
-    mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
-ax.get_xaxis().set_major_formatter(
-    mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
-plt.title('Convergence dependent on temporal lambda')
-plt.savefig("convergenceTemporal.png")
-plt.show()
-
-lines = []
-with open("data/trainingData/spatiotemporal/averageCosts0.9900000.850000.txt") as fileToOpen:
-    line = [int(float(line.rstrip())) for line in fileToOpen]
-    lines.append(line)
-
-with open("data/trainingData/temporal/averageCosts0.9900001.000000.txt") as fileToOpen:
-    line = [int(float(line.rstrip())) for line in fileToOpen]
-    lines.append(line)
-
-fig, ax = plt.subplots()
-plt.plot(x, smooth(lines[1], .8), label="$λ_t$ = 0.99")
-plt.plot(x, smooth(lines[0], .8), label="$λ_t$ = 0.99; $λ_s$ = 0.85")
-
-
-plt.xlabel("Iteration")
-plt.ylabel("Average costs")
-plt.legend()
-plt.yscale("log")
-ax.get_yaxis().set_major_formatter(
-    mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
-ax.get_xaxis().set_major_formatter(
-    mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
-plt.title('Convergence dependent on spatiotemporal lambdas')
-plt.savefig("convergenceSpatioTemporal.png")
+ax.yaxis.set_minor_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
+ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
+ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
+plt.ylim([2000000, 10000000])
+plt.xlim([0, 10500])
+plt.gcf().subplots_adjust(left=0.2)
+plt.savefig("convergenceTemporal_1.png", dpi=1000)
 plt.show()

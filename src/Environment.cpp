@@ -552,7 +552,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
     // Create an instance of the custom loss function
     logLoss loss_fn;
     // Instantiate an Adam optimization algorithm to update our Nets' parameters.
-    torch::optim::Adam optimizerAssignmentNet(assignmentNet->parameters(), /*lr=*/0.0002);
+    torch::optim::Adam optimizerAssignmentNet(assignmentNet->parameters(), /*lr=*/0.0001);
     double running_costs = 0.0;
     double runningCounter = 0.0;
     double runningRejectedpercentage = 0.0;
