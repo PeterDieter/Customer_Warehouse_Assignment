@@ -60,6 +60,12 @@ For neural network stuff, we use Pytorch. So make sure that Pytorch is installed
 cmake -DCMAKE_PREFIX_PATH=$PWD/../libtorch
 make
 ```
+alternatively, you might want to try:
+
+```
+cmake -DCMAKE_PREFIX_PATH=$PWD/../../libtorch
+make
+```
 
 ## Running the program
 
