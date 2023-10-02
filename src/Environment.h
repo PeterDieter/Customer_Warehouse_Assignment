@@ -104,7 +104,7 @@ private:
 	// Functions that writes routes/orders and costs to file
 	void writeRoutesAndOrdersToFile(std::string fileNameRoutes, std::string fileNameOrders);
 	void writeCostsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, float lambdaTemporal, float lambdaSpatial, bool is_training);
-	void writeStatsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, std::vector<float> averageWaitingTime, std::vector<float> maxWaitingTime, float lambdaTemporal, float lambdaSpatial, bool is_training);
+	void writeStatsToFile(std::vector<float> costs, std::vector<float> averageRejectionRateVector, std::vector<float> averageWaitingTime, std::vector<float> maxWaitingTime, float lambdaTemporal, float lambdaSpatial, bool is_training, bool is_nearest_policy);
 	// Function to draw an inter arrival time based on rate specified in data
 	int drawFromExponentialDistribution(double lambda);
 

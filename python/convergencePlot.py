@@ -35,12 +35,12 @@ if trainingData:
     division = 100
     multiplier = 100
     offset = 3
-    fileName = "trainingData_08_25"
+    fileName = "trainingData"
 else:
     division = 1000
     offset = 0
     multiplier = 1
-    fileName = "testData_08_25"
+    fileName = "testData"
 
 bestTv = float('inf')
 lines, tLams, sLams = [], [], []
@@ -48,9 +48,9 @@ for subdir, dirs, files in os.walk("data/experimentData/" + fileName):
     for file in sorted(files):
         penalty = int(file[10+offset:14+offset])
         arrivalRate = int(file[15+offset:17+offset])
-        tLam = file[25+offset:29+offset]
+        tLam = file[25+offset:30+offset]
         sLam = file[34+offset:38+offset]
-        if penalty == 2700 and arrivalRate == 25 and sLam == "1.00":
+        if penalty == 2700 and arrivalRate == 25 and sLam == "1.00" and tLam != "0.980":
             with open(os.path.join(subdir, file)) as fileToOpen:
                 df = pd.read_csv(os.path.join(subdir, file), delimiter=" ")
                 objValues = df.iloc[:,0].to_list()
@@ -71,7 +71,7 @@ fig, ax = plt.subplots()
 ax.set_prop_cycle(line_cycler)
 plt.style.use('ggplot')
 for idx, line in enumerate(lines):
-    plt.plot(x, smooth(line, .7), label="$λ_t$ = " + tLams[idx] + " $λ_s$ = " + sLams[idx],)
+    plt.plot(x, smooth(line, .7), label="$λ_t$ = " + str(round(float(tLams[idx]),3)) + " $λ_s$ = " + sLams[idx],)
 
 
 plt.xlabel("Iteration")
@@ -81,7 +81,7 @@ plt.yscale("log")
 ax.yaxis.set_minor_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
 ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
 ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
-plt.ylim([2000000, 10000000])
+plt.ylim([1800000, 10000000])
 plt.xlim([0, 10500])
 plt.gcf().subplots_adjust(left=0.2)
 plt.savefig("convergenceTemporal_1.png", dpi=1000)
