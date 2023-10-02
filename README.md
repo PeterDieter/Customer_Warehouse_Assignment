@@ -1,4 +1,4 @@
-# Spatio-temporal Credit Assignment in Reinforcement Learning for Multi-Depot Delivery Services
+# Reinforcement Learning with Spatio-Temporal Cost Assignment for Order-Fulfillment Center Assignment in Instant Delivery Services
 
 In the problem at hand, we operate multiple warehouse (depots) in a service region from which couriers start their trip to serve an order. When an order arrives, we need to assign it to a warehouse and a courier. The goal is to minimize the waiting time of customers. We can also reject customers, which comes with certain costs.
 
