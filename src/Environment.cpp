@@ -104,6 +104,9 @@ void Environment::initialize(int timeLimit)
     while (currTime < timeLimit){
         nextTime = drawFromExponentialDistribution(data->interArrivalTime);
         currTime += nextTime;
+        if(currTime > 4*3600){
+            data->interArrivalTime = 15; 
+        }
         orderTimes.push_back(nextTime);
         clientsVector.push_back(data->rng() % data->nbClients);
         timesToComission.push_back(drawFromExponentialDistribution(data->meanCommissionTime));
@@ -423,6 +426,8 @@ torch::Tensor Environment::getStateAssignmentProblem(Order* order){
         state.push_back(std::max(0, getFastestAvailableCourier(w)->timeWhenAvailable - currentTime));
     }
 
+    //state.push_back(currentTime);
+
     // vector to tensor
     auto options = torch::TensorOptions().dtype(at::kFloat);
     torch::Tensor stateTensor = torch::from_blob(state.data(), {1, data->nbWarehouses*5}, options).clone().to(torch::kFloat);
@@ -520,7 +525,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
     // Create an instance of the custom loss function
     logLoss loss_fn;
     // Instantiate an Adam optimization algorithm to update our Nets' parameters.
-    torch::optim::Adam optimizerAssignmentNet(assignmentNet->parameters(), /*lr=*/0.0001);
+    torch::optim::Adam optimizerAssignmentNet(assignmentNet->parameters(), /*lr=*/0.0002);
     double running_costs = 0.0;
     double runningCounter = 0.0;
     double runningRejectedpercentage = 0.0;
@@ -543,6 +548,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
             }
             if (timeCustomerArrives < timeNextCourierArrivesAtOrder && currentTime <= timeLimit && counter<orderTimes.size()-1){
                 timeCustomerArrives += orderTimes[counter];
+                currentTime = timeCustomerArrives;
                 counter += 1;
                 // Draw new order and assign it to warehouse, picker and courier. MUST BE IN THAT ORDER!!!
                 Order* newOrder = new Order;
@@ -576,7 +582,7 @@ void Environment::trainREINFORCE(int timeLimit, float lambdaTemporal, float lamb
             }
         }
         // Reset gradients of neural network.
-        optimizerAssignmentNet.zero_grad();
+        //optimizerAssignmentNet.zero_grad();
         torch::Tensor assignmentCosts = getCostsVectorDiscountedAssignmentProblem(lambdaTemporal, lambdaSpatial);
         torch::Tensor predAsssignment = assignmentNet->forward(assingmentProblemStates);
         auto rowsAssignment = torch::arange(0, predAsssignment.size(0), torch::kLong);
@@ -638,6 +644,7 @@ void Environment::testREINFORCE(int timeLimit, float lambdaTemporal, float lambd
             }
             if (timeCustomerArrives < timeNextCourierArrivesAtOrder && currentTime <= timeLimit && counter<orderTimes.size()-1){
                 timeCustomerArrives += orderTimes[counter];
+                currentTime = timeCustomerArrives;
                 counter += 1;
                 // Draw new order and assign it to warehouse, picker and courier. MUST BE IN THAT ORDER!!!
                 Order* newOrder = new Order;
@@ -715,6 +722,7 @@ void Environment::nearestWarehousePolicy(int timeLimit)
 
             if (timeCustomerArrives < timeNextCourierArrivesAtOrder && currentTime <= timeLimit && counter<orderTimes.size()-1){
                 timeCustomerArrives += orderTimes[counter];
+                currentTime = timeCustomerArrives;
                 counter += 1;
                 // Draw new order and assign it to warehouse, picker and courier. MUST BE IN THAT ORDER!!!
                 Order* newOrder = new Order;
@@ -760,9 +768,9 @@ void Environment::nearestWarehousePolicy(int timeLimit)
         }
         //std::cout<<"----- Simulation finished -----"<<std::endl;
         //std::cout<<"----- Number of orders that arrived: " << orders.size() << " and served: " << nbOrdersServed << " Obj. value: " << getObjValue() << ". Mean wt: " << totalWaitingTime/nbOrdersServed <<" seconds. Highest wt: " << highestWaitingTimeOfAnOrder <<" seconds. -----" <<std::endl;
-        writeRoutesAndOrdersToFile("data/animationData/routes.txt", "data/animationData/orders.txt");
+        //writeRoutesAndOrdersToFile("data/animationData/routes.txt", "data/animationData/orders.txt");
     }
-    writeStatsToFile(averageCostVector, averageRejectionRateVector, meanWaitingTimeVector, maxWaitingTimeVector, 0, 0, false, true);
+    //writeStatsToFile(averageCostVector, averageRejectionRateVector, meanWaitingTimeVector, maxWaitingTimeVector, 0, 0, false, true);
     std::cout<< "Iterations: " << runningCounter <<" Average costs: " << running_costs / runningCounter <<std::endl;
 }
 

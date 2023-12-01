@@ -122,19 +122,18 @@ struct policyNetwork : torch::nn::Module {
 	policyNetwork(int64_t inputSize, int64_t outputSize) {
 		fc1 = register_module("fc1", torch::nn::Linear(inputSize, 1024));
 		fc2 = register_module("fc2", torch::nn::Linear(1024, 512));
-		fc3 = register_module("fc3", torch::nn::Linear(512, 128));
-		fc4 = register_module("fc4", torch::nn::Linear(128, outputSize));
+		fc3 = register_module("fc3", torch::nn::Linear(512, 256));
+		fc4 = register_module("fc4", torch::nn::Linear(256, outputSize));
 	}
 
 	// Implement the Net's algorithm.
 	torch::Tensor forward(torch::Tensor x) {	
 		// Use one of many tensor manipulation functions.
-		x = torch::leaky_relu(fc1->forward(x));
 		x = torch::layer_norm(x, (x.size(1)));
-		x = torch::dropout(x, /*p=*/0, /*train=*/is_training());
-		x = torch::leaky_relu(fc2->forward(x));
-		x = torch::dropout(x, /*p=*/0, /*train=*/is_training());
-		x = torch::leaky_relu(fc3->forward(x));
+		x = torch::relu(fc1->forward(x));
+		// x = torch::layer_norm(x, (x.size(1)));
+		x = torch::relu(fc2->forward(x));
+		x = torch::relu(fc3->forward(x));
 		x = fc4->forward(x);
 		x = torch::softmax(x, /*dim=*/1);
 		return x;
